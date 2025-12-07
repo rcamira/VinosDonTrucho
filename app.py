@@ -1,9 +1,8 @@
-from flask import Flask, render_template, request, Response, jsonify, redirect, url_for
-import database as dbase
+from flask import Flask, render_template, request, Response, jsonify, redirect, url_for, flash
+import utils.database as dbase
 from models.product import Product
 
 db = dbase.dbConnection()
-
 app = Flask(__name__)
 
 #Rutas de la aplicación
