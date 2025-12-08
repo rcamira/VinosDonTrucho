@@ -1,0 +1,51 @@
+{% extends 'base.html' %} 
+
+{% block content %}
+
+<div class="mt-5">
+    <h1 class="text-center mb-4">Detalle del Producto</h1>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card bg-dark text-white border-light">
+                <div class="row g-0">
+                    <div class="col-md-4">
+                        <img src="{{ product.image }}" class="img-fluid rounded-start" alt="Imagen de {{ product.name }}" style="height: 100%; object-fit: cover;">
+                    </div>
+                    <div class="col-md-8">
+                        <div class="card-body">
+                            <h2 class="card-title text-warning">{{ product.name }}</h2>
+                            <p class="card-text">
+                                <strong>Descripción:</strong> {{ product.description }}
+                            </p>
+                            
+                            <ul class="list-group list-group-flush bg-dark">
+                                <li class="list-group-item bg-dark text-white">
+                                    <strong>Precio:</strong> <span class="badge bg-success">${{ "{:,.2f}".format(product.price | float) }}</span>
+                                </li>
+                                <li class="list-group-item bg-dark text-white">
+                                    <strong>Stock:</strong> <span class="badge bg-info">{{ product.stock }} unidades</span>
+                                </li>
+                                <li class="list-group-item bg-dark text-white">
+                                    <strong>Categoría:</strong> <span class="badge bg-primary">{{ product.category }}</span>
+                                </li>
+                            </ul>
+                            
+                            <div class="mt-4">
+                                <a href="{{ url_for('products_list') }}" class="btn btn-secondary me-2">
+                                    <i class="fas fa-arrow-left"></i> Volver al Listado
+                                </a>
+                                
+                                <a href="{{ url_for('edit_product', product_id=product._id) }}" class="btn btn-warning">
+                                    <i class="fas fa-edit"></i> Editar Producto
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

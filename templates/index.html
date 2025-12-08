@@ -1,0 +1,66 @@
+{% extends 'base.html' %} 
+
+{% block content %}
+
+    <h1 class="text-center mt-5 mb-3">LICORERIA "DON TRUCHO"</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' or category == 'danger' else 'success' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="mb-4">
+        <a href="{{ url_for('products_new_form') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Añadir Nuevo Licor
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="text-center">LICORES REGISTRADOS</h5>
+        </div>
+        <div class="card-body">
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+                
+                {% for product in products %}
+                    <div class="col">
+                        <div class="card h-100 text-white border-light">
+                            <img src="{{ product.image }}" class="card-img-top product-image" alt="Imagen de {{ product.name }}">
+                            <div class="card-body">
+                                
+                                <h5 class="card-title text-warning">
+                                    <a href="{{ url_for('product_detail', product_id=product._id) }}" class="text-warning text-decoration-none">
+                                        {{ product.name }}
+                                    </a>
+                                </h5>
+                                
+                                <p class="card-text">
+                                    <strong>Precio:</strong> ${{ "{:,.2f}".format(product.price | float) }}<br>
+                                    <strong>Stock:</strong> {{ product.stock }} uds.<br>
+                                    <strong>Categoría:</strong> {{ product.category }}
+                                </p>
+                            </div>
+                            <div class="card-footer d-flex justify-content-between">
+                                <a href="{{ url_for('edit_product', product_id=product._id) }}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i> Editar
+                                </a>
+                                
+                                <a href="{{ url_for('confirm_delete_page', product_id=product._id) }}" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash-alt"></i> Eliminar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+
+            </div>
+        </div> 
+    </div>
+
+{% endblock %}
