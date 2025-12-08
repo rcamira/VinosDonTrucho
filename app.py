@@ -10,18 +10,15 @@ app = Flask(__name__)
 def home():
     products = db['products']
 
-    # /?name=...&category=...&min_price=...&max_price=...
     name = request.args.get('name', '').strip()
     min_price_raw = request.args.get('min_price', '').strip()
     max_price_raw = request.args.get('max_price', '').strip()
 
     query = {}
 
-    # Búsqueda por nombre (contiene, sin importar mayúsc/minúsc)
     if name:
         query['name'] = {'$regex': name, '$options': 'i'}
 
-    # Filtro por rango de precio
     price_filter = {}
     if min_price_raw:
         try:
@@ -40,9 +37,8 @@ def home():
     if price_filter:
         query['price'] = price_filter
 
-    # Si no hay filtros, query = {} y trae todo
     productsReceived = products.find(query)
-    return render_template('index.html', products=productsReceived)
+    return render_template('product_form.html', products=productsReceived)
 
 #Method Post
 @app.route('/products', methods=['POST'])
