@@ -1,0 +1,32 @@
+{% extends 'base.html' %} 
+
+{% block content %}
+{% set product_id = product._id %}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card text-white bg-dark border-danger">
+                <div class="card-header bg-danger">
+                    <h4 class="text-center">⚠️ Confirmación de Eliminación</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p class="lead">¿Estás seguro de que deseas eliminar permanentemente el siguiente producto?</p>
+                    <h5 class="text-warning mb-4">{{ product.name }}</h5>
+                    
+                    <form action="{{ url_for('delete_product_action', product_id=product_id) }}" method="POST" style="display:inline;">
+                        <button type="submit" class="btn btn-danger btn-lg me-3">
+                            <i class="fas fa-trash-alt"></i> Sí, Eliminar
+                        </button>
+                    </form>
+                    
+                    <a href="{{ url_for('products_list') }}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
