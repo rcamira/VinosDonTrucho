@@ -59,6 +59,26 @@
                         <h5 class="text-center">LICORES REGISTRADOS</h5>
                     </div>
                     <div class="card-body">
+                        <!-- 🔍 FORMULARIO DE FILTROS -->
+    <form method="GET" action="/" class="mb-3">
+        <div class="row">
+            <div class="col-12">
+                <input type="text" class="form-control mb-2" name="name" placeholder="Buscar por nombre">
+            </div>
+
+            <div class="col-6">
+                <input type="number" class="form-control mb-2" step="0.01" name="min_price" placeholder="Precio mín.">
+            </div>
+            <div class="col-6">
+                <input type="number" class="form-control mb-2" step="0.01" name="max_price" placeholder="Precio máx.">
+            </div>
+
+            <div class="col-12">
+                <button class="btn btn-primary w-100" type="submit">🔎 Filtrar</button>
+            </div>
+        </div>
+    </form>
+    <!-- 🔍 FIN FORMULARIO DE FILTROS -->
                         <ul class="list-group">
                             <div class="row row-col-2 row-cols-sm-2 row-cols-md-3 row-cols-lg-3">
                                 {% for product in products %}

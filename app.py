@@ -9,8 +9,40 @@ app = Flask(__name__)
 @app.route('/')
 def home():
     products = db['products']
-    productsReceived = products.find()
-    return render_template('index.html', products = productsReceived)
+
+    # /?name=...&category=...&min_price=...&max_price=...
+    name = request.args.get('name', '').strip()
+    min_price_raw = request.args.get('min_price', '').strip()
+    max_price_raw = request.args.get('max_price', '').strip()
+
+    query = {}
+
+    # Búsqueda por nombre (contiene, sin importar mayúsc/minúsc)
+    if name:
+        query['name'] = {'$regex': name, '$options': 'i'}
+
+    # Filtro por rango de precio
+    price_filter = {}
+    if min_price_raw:
+        try:
+            min_price = float(min_price_raw)
+            price_filter['$gte'] = min_price
+        except ValueError:
+            pass
+
+    if max_price_raw:
+        try:
+            max_price = float(max_price_raw)
+            price_filter['$lte'] = max_price
+        except ValueError:
+            pass
+
+    if price_filter:
+        query['price'] = price_filter
+
+    # Si no hay filtros, query = {} y trae todo
+    productsReceived = products.find(query)
+    return render_template('index.html', products=productsReceived)
 
 #Method Post
 @app.route('/products', methods=['POST'])
@@ -67,4 +99,4 @@ def notFound(error=None):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=4000)
+    app.run(port=5000 ,debug=True)
