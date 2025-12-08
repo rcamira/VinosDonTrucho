@@ -3,7 +3,7 @@ import certifi
 # Asegúrate de importar el error para que tu try/except funcione
 from pymongo.errors import ServerSelectionTimeoutError 
 
-MONGO_URI = 'mongodb+srv://brayansejas_adminDef:CqEGb9QVC4F2Vmg@cluster0.7c8la3d.mongodb.net/?appName=Cluster0'
+MONGO_URI = 'mongodb+srv://luca:22194ali@cluster0.gpzdxs8.mongodb.net/'
 ca = certifi.where()
 
 def dbConnection():

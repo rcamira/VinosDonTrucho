@@ -15,8 +15,71 @@
         {% endif %}
     {% endwith %}
 
+    <!-- FORMULARIO DE BÚSQUEDA Y FILTROS -->
+    <div class="card mb-4">
+        <div class="card-header bg-secondary">
+            <h5 class="text-center mb-0">🔍 Buscar y Filtrar Productos</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('products_list') }}" class="row g-3">
+                
+                <!-- Búsqueda por nombre -->
+                <div class="col-md-4">
+                    <label class="form-label">Buscar por Nombre:</label>
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Ej: Ron, Vodka..." 
+                           value="{{ search if search else '' }}">
+                </div>
+                
+                <!-- Filtro por categoría -->
+                <div class="col-md-3">
+                    <label class="form-label">Categoría:</label>
+                    <select name="category" class="form-select">
+                        <option value="">Todas las categorías</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>
+                                {{ cat }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Precio mínimo -->
+                <div class="col-md-2">
+                    <label class="form-label">Precio Mín ($):</label>
+                    <input type="number" name="min_price" class="form-control" 
+                           step="0.01" placeholder="0.00"
+                           value="{{ min_price if min_price else '' }}">
+                </div>
+                
+                <!-- Precio máximo -->
+                <div class="col-md-2">
+                    <label class="form-label">Precio Máx ($):</label>
+                    <input type="number" name="max_price" class="form-control" 
+                           step="0.01" placeholder="999.99"
+                           value="{{ max_price if max_price else '' }}">
+                </div>
+                
+                <!-- Botón de búsqueda -->
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Botón para limpiar filtros -->
+            <div class="mt-3 text-center">
+                <a href="{{ url_for('products_list') }}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-times"></i> Limpiar Filtros
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón para añadir nuevo producto -->
     <div class="mb-4">
-        <a href="{{ url_for('products_new_form') }}" class="btn btn-primary">
+        <a href="{{ url_for('products_new_form') }}" class="btn btn-primary btn-lg">
             <i class="fas fa-plus"></i> Añadir Nuevo Licor
         </a>
     </div>

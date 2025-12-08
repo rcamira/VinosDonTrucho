@@ -17,8 +17,46 @@ def index_redirect():
 @app.route('/products', methods=['GET'])
 def products_list():
     products = db['products']
-    productsReceived = products.find().sort('name')
-    return render_template('index.html', products = productsReceived)
+    
+    # Obtener parámetros de búsqueda y filtros
+    search_name = request.args.get('search', '').strip()
+    filter_category = request.args.get('category', '').strip()
+    min_price = request.args.get('min_price', '').strip()
+    max_price = request.args.get('max_price', '').strip()
+    
+    # Construir query de MongoDB
+    query = {}
+    
+    # Filtro por nombre (búsqueda)
+    if search_name:
+        query['name'] = {'$regex': search_name, '$options': 'i'}
+    
+    # Filtro por categoría
+    if filter_category:
+        query['category'] = filter_category
+    
+    # Filtro por rango de precio
+    if min_price or max_price:
+        query['price'] = {}
+        if min_price:
+            query['price']['$gte'] = float(min_price)
+        if max_price:
+            query['price']['$lte'] = float(max_price)
+    
+    # Ejecutar búsqueda con filtros
+    productsReceived = products.find(query).sort('name')
+    
+    # Obtener categorías únicas para el select
+    all_categories = products.distinct('category')
+    
+    return render_template('index.html', 
+                         products=productsReceived, 
+                         categories=all_categories,
+                         search=search_name,
+                         selected_category=filter_category,
+                         min_price=min_price,
+                         max_price=max_price)
+
 
 #Method Post
 @app.route('/products', methods=['POST'])
@@ -55,10 +93,8 @@ def product_detail(product_id):
     products = db['products']
     product = products.find_one({'_id' : ObjectId(product_id)})
     if product:
-        # Debes crear esta plantilla
         return render_template('product_detail.html', product=product)
     return notFound()
-
 
 
 #Method delete Get
@@ -67,9 +103,9 @@ def confirm_delete_page(product_id):
     products = db['products']
     product = products.find_one({'_id': ObjectId(product_id)})
     if product:
-        # Debes crear esta plantilla
         return render_template('confirm_delete.html', product=product) 
     return notFound()
+
 
 #Method delete Post
 @app.route('/products/<string:product_id>/delete', methods=['POST'])
@@ -79,7 +115,6 @@ def delete_product_action(product_id):
     
     flash('Producto eliminado correctamente')
     return redirect(url_for('products_list'))
-
 
 
 #Method Put
@@ -127,7 +162,6 @@ def notFound(error=None):
     response = jsonify(message)
     response.status_code = 404
     return response
-
 
 
 if __name__ == '__main__':
