@@ -14,12 +14,92 @@ def index_redirect():
     return redirect(url_for('products_list'))
 
 
+#@app.route('/products', methods=['GET'])
+#def products_list():
+ #   products = db['products']
+  #  productsReceived = products.find().sort('name')
+   # return render_template('index.html', products = productsReceived)
 @app.route('/products', methods=['GET'])
 def products_list():
-    products = db['products']
-    productsReceived = products.find().sort('name')
-    return render_template('index.html', products = productsReceived)
-
+    # Verificar conexión a la base de datos
+    if db is None:
+        flash('❌ Error: No hay conexión a MongoDB', 'error')
+        return render_template('index.html', 
+                             products=[], 
+                             categories=[], 
+                             current_category='', 
+                             search_query='', 
+                             min_price='', 
+                             max_price='')
+    
+    try:
+        products_col = db['products']
+        
+        # 1. OBTENER PARÁMETROS DE FILTRO DESDE LA URL
+        category_filter = request.args.get('category', '')
+        search_query = request.args.get('search', '')
+        min_price = request.args.get('min_price', '')
+        max_price = request.args.get('max_price', '')
+        
+        # 2. CONSTRUIR FILTRO DINÁMICO PARA MONGODB
+        query_filter = {}
+        
+        # Filtro por categoría
+        if category_filter:
+            query_filter['category'] = category_filter
+        
+        # Búsqueda por nombre (búsqueda parcial, case-insensitive)
+        if search_query:
+            query_filter['name'] = {'$regex': search_query, '$options': 'i'}
+        
+        # Filtro por rango de precio
+        if min_price or max_price:
+            query_filter['price'] = {}
+            if min_price:
+                try:
+                    query_filter['price']['$gte'] = float(min_price)  # Mayor o igual que
+                except ValueError:
+                    min_price = ''  # Si no es número válido, ignorar
+            if max_price:
+                try:
+                    query_filter['price']['$lte'] = float(max_price)  # Menor o igual que
+                except ValueError:
+                    max_price = ''  # Si no es número válido, ignorar
+        
+        # 3. APLICAR FILTROS
+        if query_filter:
+            products_cursor = products_col.find(query_filter).sort('name')
+        else:
+            products_cursor = products_col.find().sort('name')
+        
+        # Convertir cursor a lista (importante para que funcione en plantilla)
+        products_list = list(products_cursor)
+        
+        # 4. OBTENER CATEGORÍAS ÚNICAS PARA EL DROPDOWN
+        try:
+            categories = products_col.distinct('category')
+        except:
+            categories = []
+        
+        # 5. RENDERIZAR CON TODOS LOS DATOS
+        return render_template('index.html', 
+                             products=products_list,
+                             categories=categories,
+                             current_category=category_filter,
+                             search_query=search_query,
+                             min_price=min_price,
+                             max_price=max_price)
+    
+    except Exception as e:
+        print(f"❌ Error en products_list: {e}")
+        flash(f'❌ Error al obtener productos: {str(e)}', 'error')
+        return render_template('index.html', 
+                             products=[], 
+                             categories=[], 
+                             current_category='', 
+                             search_query='', 
+                             min_price='', 
+                             max_price='')
 #Method Post
 @app.route('/products', methods=['POST'])
 def addProduct():
