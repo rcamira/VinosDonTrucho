@@ -3,61 +3,119 @@ from flask import Flask, render_template, request, Response, jsonify, redirect, 
 from bson import ObjectId
 import utils.database as dbase
 from models.product import Product
-from datetime import datetime
+from bson.objectid import ObjectId
+
 
 db = dbase.dbConnection()
 app = Flask(__name__)
-app.secret_key = 'clave_secreta_para_mensajes_flash'  # Necesario para flash()
+app.secret_key = 'mysecretkey'
 
 # ---------- RUTAS EXISTENTES (las mantienes) ----------
 @app.route('/')
-def home():
+def index_redirect():
+    return redirect(url_for('products_list'))
+
+
+@app.route('/products', methods=['GET'])
+def products_list():
     products = db['products']
     productsReceived = list(products.find())
     return render_template('index.html', products=productsReceived)
 
 @app.route('/products', methods=['POST'])
 def addProduct():
-    products = db['products']
-    name = request.form['name']
-    price = request.form['price']
-    quantity = request.form['quantity']
 
-    if name and price and quantity:
-        product = Product(name, price, quantity)
+    products = db['products']
+
+    name = request.form['name']
+    description = request.form['description'] 
+    price = request.form['price']
+    stock = request.form['stock']             
+    category = request.form['category']     
+    image = request.form['image']
+
+    if name and description and price and stock and category and image:
+
+        product = Product(name, description, price, stock, category, image)    
         products.insert_one(product.toDBCollection())
-        flash('Producto creado exitosamente!', 'success')  # Mensaje flash
-        return redirect(url_for('home'))
+
+        flash('Producto agregado correctamente')
+        return redirect(url_for('products_list'))
     else:
-        return notFound()
+        flash('¡Error! Faltan datos obligatorios.', 'error')
+        return redirect(url_for('products_list'))
 
-@app.route('/delete/<string:product_name>')
-def delete(product_name):
+
+@app.route('/products/new', methods=['GET'])
+def products_new_form():
+    return render_template('product_form.html')
+
+
+@app.route('/products/<string:product_id>', methods=['GET'])
+def product_detail(product_id):
     products = db['products']
-    products.delete_one({'name': product_name})
-    flash('Producto eliminado!', 'info')
-    return redirect(url_for('home'))
+    product = products.find_one({'_id' : ObjectId(product_id)})
+    if product:
+        # Debes crear esta plantilla
+        return render_template('product_detail.html', product=product)
+    return notFound()
 
-@app.route('/edit/<string:product_name>', methods=['POST'])
-def edit(product_name):
+
+
+#Method delete Get
+@app.route('/products/<string:product_id>/delete', methods=['GET'])
+def confirm_delete_page(product_id):
     products = db['products']
-    name = request.form['name']
-    price = request.form['price']
-    quantity = request.form['quantity']
+    product = products.find_one({'_id': ObjectId(product_id)})
+    if product:
+        # Debes crear esta plantilla
+        return render_template('confirm_delete.html', product=product) 
+    return notFound()
 
-    if name and price and quantity:
-        products.update_one(
-            {'name': product_name}, 
-            {'$set': {
-                'name': name, 
-                'price': float(price), 
-                'quantity': int(quantity),
-                'updated_at': datetime.utcnow()
-            }}
-        )
-        flash('Producto actualizado correctamente!', 'success')
-        return redirect(url_for('home'))
+#Method delete Post
+@app.route('/products/<string:product_id>/delete', methods=['POST'])
+def delete_product_action(product_id):
+    products = db['products']
+    products.delete_one({'_id' : ObjectId(product_id)})
+    
+    flash('Producto eliminado correctamente')
+    return redirect(url_for('products_list'))
+
+
+
+#Method Put
+@app.route('/products/<string:product_id>/edit', methods=['GET', 'POST'])
+def edit_product(product_id):
+    products = db['products']
+
+    if request.method == 'POST':
+        name = request.form['name']
+        description = request.form['description']
+        price = request.form['price']
+        stock = request.form['stock'] 
+        category = request.form['category']
+        image = request.form['image']
+
+        if name and description and price and stock and category and image:
+            updated_product = {
+                'name' : name, 
+                'description': description,
+                'price' : float(price), 
+                'stock' : int(stock),
+                'category': category,
+                'image': image
+            }
+            products.update_one({'_id' : ObjectId(product_id)}, {'$set' : updated_product})
+            flash('Producto actualizado correctamente')
+            return redirect(url_for('products_list'))
+        
+        else:
+            flash('¡Error! Faltan datos obligatorios para la edición.', 'error')
+            return redirect(url_for('products_list'))
     else:
+        product_to_edit = products.find_one({'_id': ObjectId(product_id)})
+        if product_to_edit:
+            return render_template('product_form.html', product=product_to_edit, edit_mode=True)
         return notFound()
 
 # ---------- NUEVAS RUTAS (según requisitos del proyecto) ----------
