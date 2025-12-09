@@ -21,7 +21,7 @@
             <h5 class="mb-0"><i class="fas fa-filter"></i> FILTROS Y BÚSQUEDA</h5>
         </div>
         <div class="card-body bg-dark">
-            <form method="GET" action="{{ url_for('products_list') }}" class="row g-3">
+            <form method="GET" action="{{ url_for('products.product_list') }}" class="row g-3">
                 
                 <!-- BÚSQUEDA POR NOMBRE -->
                 <div class="col-md-4">
@@ -65,7 +65,7 @@
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-filter"></i> Filtrar
                         </button>
-                        <a href="{{ url_for('products_list') }}" class="btn btn-secondary">
+                        <a href="{{ url_for('products.product_list') }}" class="btn btn-secondary">
                             <i class="fas fa-redo"></i>
                         </a>
                     </div>
@@ -77,7 +77,7 @@
     <!-- ========== FIN DE FILTROS ========== -->
 
     <div class="mb-4">
-        <a href="{{ url_for('products_new_form') }}" class="btn btn-primary">
+        <a href="{{ url_for('products.products_new_form') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> Añadir Nuevo Licor
         </a>
         
@@ -103,7 +103,7 @@
                             <div class="card-body">
                                 
                                 <h5 class="card-title text-warning">
-                                    <a href="{{ url_for('product_detail', product_id=product._id) }}" class="text-warning text-decoration-none">
+                                    <a href="{{ url_for('products.product_detail', product_id=product._id) }}" class="text-warning text-decoration-none">
                                         {{ product.name }}
                                     </a>
                                 </h5>
@@ -115,11 +115,11 @@
                                 </p>
                             </div>
                             <div class="card-footer d-flex justify-content-between">
-                                <a href="{{ url_for('edit_product', product_id=product._id) }}" class="btn btn-sm btn-warning">
+                                <a href="{{ url_for('products.edit_product', product_id=product._id) }}" class="btn btn-sm btn-warning">
                                     <i class="fas fa-edit"></i> Editar
                                 </a>
                                 
-                                <a href="{{ url_for('confirm_delete_page', product_id=product._id) }}" class="btn btn-sm btn-danger">
+                                <a href="{{ url_for('products.confirm_delete_page', product_id=product._id) }}" class="btn btn-sm btn-danger">
                                     <i class="fas fa-trash-alt"></i> Eliminar
                                 </a>
                             </div>
