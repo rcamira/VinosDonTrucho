@@ -3,7 +3,7 @@
 {% block content %}
 
 {% set is_edit = product is defined %}
-{% set action_url = url_for('edit_product', product_id=product._id) if is_edit else url_for('addProduct') %}
+{% set action_url = url_for('products.edit_product', product_id=product._id) if is_edit else url_for('products.addproduct') %}
 {% set form_title = 'EDITAR LICOR: ' + product.name if is_edit else 'INGRESAR NUEVO LICOR 🥃' %}
 {% set button_text = 'Guardar Cambios' if is_edit else 'Guardar Licor' %}
 
@@ -53,7 +53,7 @@
 
                         <button class="btn btn-primary me-2" type="submit">{{ button_text }}</button>
                         
-                        <a href="{{ url_for('products_list') }}" class="btn btn-secondary">Cancelar</a>
+                        <a href="{{ url_for('products.product_list') }}" class="btn btn-secondary">Cancelar</a>
                         
                     </form>
                 </div>

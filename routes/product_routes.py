@@ -1,216 +1,204 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from bson import ObjectId
+from datetime import datetime
 from models.product import Product
+import utils.database as dbase
+db = dbase.dbConnection()
 
-# Crear Blueprint para productos
+
 product_bp = Blueprint('products', __name__, url_prefix='/products')
 
-@product_bp.route('/')
-def list_products():
+@product_bp.route('/', methods=['GET'])
+def product_list():
     """Listar todos los productos con filtros"""
     # Obtener parámetros de filtro
-    nombre = request.args.get('nombre', '').strip()
-    categoria = request.args.get('categoria', '').strip()
-    min_precio = request.args.get('min_precio', '').strip()
-    max_precio = request.args.get('max_precio', '').strip()
+    products_col = db['products']
+    category_filter = request.args.get('category', '')
+    search_query = request.args.get('search', '') # <-- Tu template usa 'search'
+    min_price = request.args.get('min_price', '')
+    max_price = request.args.get('max_price', '')
     
-    # Obtener productos
-    if nombre:
-        products = Product.search_by_name(nombre)
-    elif categoria and categoria != 'Todas':
-        products = Product.filter_by_category(categoria)
-    elif min_precio and max_precio:
+    
+    query_filter = {}
+    if category_filter:
+        query_filter['category'] = category_filter
+    if search_query:
+        query_filter['name'] = {'$regex': search_query, '$options': 'i'}
+    if min_price or max_price:
+        query_filter['price'] = {}
+        # Manejo de excepciones para precios (similar a tu código antiguo)
         try:
-            products = Product.filter_by_price_range(float(min_precio), float(max_precio))
+            if min_price: query_filter['price']['$gte'] = float(min_price)
+            if max_price: query_filter['price']['$lte'] = float(max_price)
         except ValueError:
-            products = Product.get_all()
-    else:
-        products = Product.get_all()
+            flash('Error en formato de precio.', 'error')
+            
+    products_list = list(products_col.find(query_filter).sort('name'))
+    categories = products_col.distinct('category') or []
     
-    # Obtener categorías únicas para el filtro
-    categories = Product.get_categories()
-    
-    return render_template('products/list.html', 
-                         products=products,
-                         categories=categories,
-                         filtros={
-                             'nombre': nombre,
-                             'categoria': categoria,
-                             'min_precio': min_precio,
-                             'max_precio': max_precio
-                         })
+    # 2. Renderizar el template INDEX.HTML que ya tienes
+    return render_template('index.html', 
+                           products=products_list,
+                           categories=categories,
+                           current_category=category_filter,
+                           search_query=search_query,
+                           min_price=min_price,
+                           max_price=max_price)
+
 
 @product_bp.route('/new', methods=['GET'])
-def new_product_form():
+def products_new_form():
     """Mostrar formulario para nuevo producto"""
-    categories = Product.get_categories()
-    return render_template('products/new.html', categories=categories)
+    categories = db['products'].distinct('category') or []
+    return render_template('product_form.html', categories=categories)
 
-@product_bp.route('/new', methods=['POST'])
-def create_product():
+
+@product_bp.route('/', methods=['POST'])
+def addproduct():
     """Crear nuevo producto"""
     try:
         # Obtener datos del formulario
-        product_data = {
-            "nombre": request.form.get('nombre', '').strip(),
-            "descripcion": request.form.get('descripcion', '').strip(),
-            "precio": request.form.get('precio', '0').strip(),
-            "stock": request.form.get('stock', '0').strip(),
-            "categoria": request.form.get('categoria', 'General').strip(),
-            "imagen": request.form.get('imagen', '/static/images/default.jpg').strip()
-        }
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        price = request.form.get('price', '0').strip()
+        stock = request.form.get('stock', '0').strip()
+        category = request.form.get('category', 'Otro').strip()
+        image = request.form.get('image', 'url_defecto').strip()
         
-        # Validaciones
-        if not product_data['nombre']:
-            flash('El nombre del producto es requerido', 'danger')
-            return redirect(url_for('products.new_product_form'))
+        redirect_url_on_error = url_for('products.products_new_form')
+
+        if not name or not price or not stock:
+            flash('Faltan datos obligatorios.', 'error')
+            return redirect(url_for('products.product_list'))
         
+        # Manejo de la conversión de tipos (Aquí evitamos el ValueError)
         try:
-            product_data['precio'] = float(product_data['precio'])
-            product_data['stock'] = int(product_data['stock'])
-            
-            if product_data['precio'] < 0:
-                flash('El precio no puede ser negativo', 'danger')
-                return redirect(url_for('products.new_product_form'))
-            
-            if product_data['stock'] < 0:
-                flash('El stock no puede ser negativo', 'danger')
-                return redirect(url_for('products.new_product_form'))
-                
+            price_float = float(price)
+            stock_int = int(stock)
         except ValueError:
-            flash('Precio y stock deben ser números válidos', 'danger')
-            return redirect(url_for('products.new_product_form'))
-        
-        # Crear producto
-        product_id = Product.create(product_data)
-        
-        if product_id:
-            flash('Producto creado exitosamente!', 'success')
-            return redirect(url_for('products.view_product', product_id=product_id))
-        else:
-            flash('Error al crear el producto', 'danger')
-            return redirect(url_for('products.new_product_form'))
+            flash('ERROR: Precio y stock deben ser números válidos.', 'danger')
+            return redirect(redirect_url_on_error)
+            
+        product = Product(
+        name,         
+        price_float,    
+        stock_int,    
+        description,   
+        category,       
+        image           
+        )
+        db['products'].insert_one(product.toDBCollection())
+
+        flash('Producto agregado correctamente', 'success')
+        return redirect(url_for('products.product_list'))
             
     except Exception as e:
         print(f"Error al crear producto: {e}")
-        flash('Error interno del servidor', 'danger')
-        return redirect(url_for('products.new_product_form'))
+        flash(f'Error interno del servidor: {e}', 'danger')
+        return redirect(url_for('products.product_list'))
 
-@product_bp.route('/<product_id>')
-def view_product(product_id):
+
+
+@product_bp.route('/<string:product_id>', methods=['GET'])
+def product_detail(product_id): # <-- Renombrado para que coincida con tus templates
     """Ver detalle de un producto"""
     try:
-        product = Product.get_by_id(product_id)
+        product = db['products'].find_one({'_id': ObjectId(product_id)})
         if product:
-            return render_template('products/view.html', product=product)
+            # Renderiza el template product_detail.html que ya tienes
+            return render_template('product_detail.html', product=product)
         else:
             flash('Producto no encontrado', 'danger')
-            return redirect(url_for('products.list_products'))
-    except Exception as e:
-        print(f"Error al ver producto: {e}")
-        flash('ID de producto inválido', 'danger')
-        return redirect(url_for('products.list_products'))
+            return redirect(url_for('products.product_list'))
+    except:
+        flash('ID inválido', 'danger')
+        return redirect(url_for('products.product_list'))
 
-@product_bp.route('/<product_id>/edit', methods=['GET'])
-def edit_product_form(product_id):
+@product_bp.route('/<string:product_id>/edit', methods=['GET'])
+def edit_product(product_id): # <-- Renombrado para que coincida con tus templates
     """Mostrar formulario para editar producto"""
     try:
-        product = Product.get_by_id(product_id)
-        if product:
-            categories = Product.get_categories()
-            return render_template('products/edit.html', 
-                                 product=product, 
-                                 categories=categories)
+        product_to_edit = db['products'].find_one({'_id': ObjectId(product_id)})
+        if product_to_edit:
+             # Renderiza el template product_form.html que ya tienes, pasando 'product'
+            return render_template('product_form.html', product=product_to_edit, edit_mode=True)
         else:
             flash('Producto no encontrado', 'danger')
-            return redirect(url_for('products.list_products'))
-    except Exception as e:
-        print(f"Error al cargar formulario de edición: {e}")
-        flash('ID de producto inválido', 'danger')
-        return redirect(url_for('products.list_products'))
+            return redirect(url_for('products.product_list'))
+    except:
+        flash('ID inválido', 'danger')
+        return redirect(url_for('products.product_list'))
 
 @product_bp.route('/<product_id>/edit', methods=['POST'])
-def update_product(product_id):
-    """Actualizar producto existente"""
+def update_product_action(product_id):
+    return edit_product_post(product_id)
+            
+@product_bp.route('/<string:product_id>/edit', methods=['POST'])
+def edit_product_post(product_id): # <-- Mantiene el nombre de ruta de tus templates
+    # Lógica de POST de edición aquí
+    products = db['products']
+    
+    # Obtener y validar datos... (Similar a addProduct)
     try:
-        # Obtener datos del formulario
-        update_data = {
-            "nombre": request.form.get('nombre', '').strip(),
-            "descripcion": request.form.get('descripcion', '').strip(),
-            "precio": request.form.get('precio', '0').strip(),
-            "stock": request.form.get('stock', '0').strip(),
-            "categoria": request.form.get('categoria', 'General').strip(),
-            "imagen": request.form.get('imagen', '/static/images/default.jpg').strip()
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        price = float(request.form.get('price', '0').strip()) # Protegido por ValueError
+        stock = int(request.form.get('stock', '0').strip())   # Protegido por ValueError
+        category = request.form.get('category', '').strip()
+        image = request.form.get('image', '').strip()
+        
+        updated_product = {
+            'name' : name, 
+            'description': description,
+            'price' : price, 
+            'stock' : stock,
+            'category': category,
+            'image': image,
+            'updated_at': datetime.utcnow()
         }
         
-        # Validaciones
-        if not update_data['nombre']:
-            flash('El nombre del producto es requerido', 'danger')
-            return redirect(url_for('products.edit_product_form', product_id=product_id))
+        products.update_one({'_id' : ObjectId(product_id)}, {'$set' : updated_product})
+        flash('Producto actualizado correctamente', 'success')
+        return redirect(url_for('products.product_list'))
         
-        try:
-            update_data['precio'] = float(update_data['precio'])
-            update_data['stock'] = int(update_data['stock'])
-            
-            if update_data['precio'] < 0:
-                flash('El precio no puede ser negativo', 'danger')
-                return redirect(url_for('products.edit_product_form', product_id=product_id))
-            
-            if update_data['stock'] < 0:
-                flash('El stock no puede ser negativo', 'danger')
-                return redirect(url_for('products.edit_product_form', product_id=product_id))
-                
-        except ValueError:
-            flash('Precio y stock deben ser números válidos', 'danger')
-            return redirect(url_for('products.edit_product_form', product_id=product_id))
-        
-        # Actualizar producto
-        result = Product.update(product_id, update_data)
-        
-        if result['modified_count'] > 0:
-            flash('Producto actualizado exitosamente!', 'success')
-        else:
-            flash('No se realizaron cambios en el producto', 'info')
-            
-        return redirect(url_for('products.view_product', product_id=product_id))
-            
+    except ValueError:
+        flash('Error: Precio o stock deben ser números.', 'error')
+        return redirect(url_for('products.edit_product', product_id=product_id))
     except Exception as e:
-        print(f"Error al actualizar producto: {e}")
-        flash('Error interno del servidor', 'danger')
-        return redirect(url_for('products.edit_product_form', product_id=product_id))
+        flash(f'Error al actualizar: {str(e)}', 'error')
+        return redirect(url_for('products.product_list'))     
 
-@product_bp.route('/<product_id>/delete', methods=['GET'])
-def delete_product_form(product_id):
-    """Mostrar confirmación de eliminación"""
+@product_bp.route('/<string:product_id>/delete', methods=['GET'])
+def confirm_delete_page(product_id): # <-- Renombrado para que coincida con tus templates
+    """Muestra confirmación para eliminar producto"""
     try:
-        product = Product.get_by_id(product_id)
+        product = db['products'].find_one({'_id': ObjectId(product_id)})
         if product:
-            return render_template('products/delete.html', product=product)
+            # Renderiza el template confirm_delete.html que ya tienes
+            return render_template('confirm_delete.html', product=product) 
         else:
             flash('Producto no encontrado', 'danger')
-            return redirect(url_for('products.list_products'))
-    except Exception as e:
-        print(f"Error al cargar confirmación de eliminación: {e}")
-        flash('ID de producto inválido', 'danger')
-        return redirect(url_for('products.list_products'))
+            return redirect(url_for('products.product_list'))
+    except:
+        flash('ID inválido', 'danger')
+        return redirect(url_for('products.product_list'))
 
-@product_bp.route('/<product_id>/delete', methods=['POST'])
-def delete_product(product_id):
+@product_bp.route('/<string:product_id>/delete', methods=['POST'])
+def delete_product_action(product_id): 
     """Eliminar producto"""
     try:
-        deleted_count = Product.delete(product_id)
+        result = db['products'].delete_one({'_id': ObjectId(product_id)})
         
-        if deleted_count > 0:
+        if result.deleted_count > 0:
             flash('Producto eliminado exitosamente!', 'success')
         else:
             flash('Producto no encontrado', 'danger')
             
-        return redirect(url_for('products.list_products'))
+        return redirect(url_for('products.product_list'))
             
     except Exception as e:
-        print(f"Error al eliminar producto: {e}")
-        flash('Error interno del servidor', 'danger')
-        return redirect(url_for('products.list_products'))
+        flash('Error al eliminar producto', 'danger')
+        return redirect(url_for('products.product_list'))
 
 @product_bp.route('/stats')
 def product_stats():
